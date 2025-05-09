@@ -4,21 +4,27 @@ import SERVICE from "../components/appwrite/majorconf";
 import { Button, Container } from "../components";
 import parse from "html-react-parser";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
 
 export default function Post() {
   const [post, setPost] = useState(null);
+  const [isAuthor, setisAuthor] = useState(false);
   const { slug } = useParams();
   const navigate = useNavigate();
 
   const userData = useSelector((state) => state.auth.userData);
 
-  const isAuthor = post && userData ? post.userId === userData.$id : false;
-
   useEffect(() => {
     if (slug) {
       SERVICE.getPost(slug).then((post) => {
-        if (post) setPost(post);
-        else navigate("/");
+        if (post) {
+          toast.info("Post fetched Successfully");
+          const isAuthor = post.userID === userData.$id;
+          setisAuthor(isAuthor);
+          setPost(post);
+        } else {
+          navigate("/");
+        }
       });
     } else navigate("/");
   }, [slug, navigate]);
@@ -27,6 +33,7 @@ export default function Post() {
     SERVICE.deletePost(post.$id).then((status) => {
       if (status) {
         SERVICE.deleteFile(post.featuredImage);
+        toast.info("post deleted successfully");
         navigate("/");
       }
     });
@@ -37,7 +44,7 @@ export default function Post() {
       <Container>
         <div className="w-full flex justify-center mb-4 relative border rounded-xl p-2">
           <img
-            src={SERVICE.getFilePreview(post.featuredImage)}
+            src={SERVICE.getFileView(post.featuredImage)}
             alt={post.title}
             className="rounded-xl"
           />

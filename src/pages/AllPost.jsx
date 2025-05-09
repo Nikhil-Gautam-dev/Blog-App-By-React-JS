@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from "react";
 import SERVICE from "../components/appwrite/majorconf";
 import { Container, Postcard } from "../components";
+import { toast } from "react-toastify";
 function AllPost() {
   const [posts, setPosts] = useState([]);
-  useEffect(() => {}, []);
+  useEffect(() => {
+    (async () => {
+      SERVICE.allPost().then((posts) => {
+        if (posts) {
+          toast.info("All post fetched successfully");
+          setPosts(posts.documents);
+        }
+      });
+    })();
+  }, []);
 
-  SERVICE.allPost([]).then((post) => {
-    if (post) {
-      setPosts(post.documents);
-    }
-  });
   return (
     <div className="w-full py-8">
       <Container>

@@ -5,26 +5,35 @@ import { login } from "../store/AuthSlice";
 import { Button, Input, Logo } from "./index";
 import { useDispatch } from "react-redux";
 import { useForm } from "react-hook-form";
+import { toast } from "react-toastify";
 
 function Signup() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [error, setError] = useState("");
-  const { register, handleSubmit } = useForm();
+  const [loading, setLoading] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
 
   const signup = async (data) => {
-    console.log("email veja gya" , data.email)
     // ek async function chlaya jisme parameter data pass kiya.
+    toast.info("Proccessing your credentials");
     setError(""); // error ko empty string se set kiya taki error message clear ho jaye
+    setLoading(true);
     try {
       const userData = await Authentication.createAccount(data); // createAccount method ko call kiya jo data ko pass kiya
       if (userData) {
         // agar userData milta hai toh
         const USERdata = await Authentication.getCurrentUser(); // getCurrentUser method ko call kiya
-        if (USERdata) dispatch(login(USERdata)); // agr current user data milta hai toh login method ko call kiya or dispatch kiya
+        if (USERdata) dispatch(login({ userData: USERdata })); // agr current user data milta hai toh login method ko call kiya or dispatch kiya
+        toast.success("Signup Successfully, welcome");
         navigate("/"); // navigate method ko call kiya jo user ko login k baad home page pr redirect karega
       }
     } catch (error) {
+      toast.error("Failed to signup please try again");
       setError(error.message);
     }
   };
@@ -47,7 +56,7 @@ function Signup() {
             to="/login"
             className="font-medium text-primary transition-all duration-200 hover:underline"
           >
-             Login
+            Login
           </Link>
         </p>
         {error && <p className="text-red-600 mt-8 text-center"> {error}</p>}
@@ -69,13 +78,20 @@ function Signup() {
                 required: true,
                 validate: {
                   matchPattern: (value) => {
-                    console.log("email", value);
-                     return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
-                      value
-                    ) || "Enter a valid email adress"}
+                    return (
+                      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
+                        value
+                      ) || "Enter a valid email adress"
+                    );
+                  },
                 },
               })}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
+            )}
 
             <Input
               label="Password: "
@@ -92,8 +108,14 @@ function Signup() {
                 },
               })}
             />
-            <Button className="w-full" type="submit">
-              Create Account
+
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password.message}
+              </p>
+            )}
+            <Button type="submit" className="w-full">
+              {loading ? "Creating Account" : "Create Account"}
             </Button>
           </div>
         </form>

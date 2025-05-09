@@ -2,14 +2,16 @@ import React, { useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { Button, Input, Select, RTE } from "../index";
 import SERVICE from "../appwrite/majorconf";
-import { useNavigate } from "react-router-dom";
+import { data, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { toast } from "react-toastify";
+
 function Postform({ post }) {
   const { register, handleSubmit, watch, setValue, control, getValues } =
     useForm({
       defaultValues: {
         title: post ? post.title : "",
-        slug: post?.slug || "",
+        slug: post?.$id || "",
         content: post ? post.content : "",
         featuredImage: post?.featuredImage || "",
         status: post?.status || "active",
@@ -20,37 +22,79 @@ function Postform({ post }) {
   const userData = useSelector((state) => state.auth.userData);
 
   const submit = async (data) => {
-    console.log("Form Submitted!", data);
-    if (post) {
-      const file =  await data.image[0] ? SERVICE.uploadFile(data.image[0]) : null;
+    toast.info("processing your form");
+    try {
+      let dbPost = null;
+      if (post) {
+        dbPost = await editPost(data);
+      } else {
+        dbPost = await createPost(data);
+      }
+
+      if (dbPost) {
+        toast.success("Post created successfully");
+        navigate(`/post/${dbPost.$id}`);
+        return;
+      }
+    } catch (error) {
+      toast.error("Error in submitting form");
+      console.log("error in submitting form: ", error);
+    }
+  };
+
+  const fileUpload = async (file) => {
+    return await SERVICE.uploadFile(file);
+  };
+
+  const createPost = async (data) => {
+    try {
+      const file = (await data.image[0])
+        ? await fileUpload(data.image[0])
+        : null;
+      if (!file) {
+        throw new Error("Error in file upload");
+      }
+      const fileId = file.$id;
+      data.featuredImage = fileId;
+      const dbPost = await SERVICE.createPost({
+        ...data,
+        userID: userData.$id,
+      });
+
+      if (dbPost) return dbPost;
+      else {
+        throw new Error("Error in creating post");
+      }
+    } catch (error) {
+      console.log("Error in creating post: ", error);
+      toast.error("Error in creating post");
+      return null;
+    }
+  };
+
+  const editPost = async (data) => {
+    try {
+      const file = (await data.image[0])
+        ? await fileUpload(data.image[0])
+        : null;
 
       if (file) {
         SERVICE.deleteFile(post.featuredImage);
       }
 
-      const dbPOSt = await SERVICE.updatePost(post.$id, {
+      const dbPost = await SERVICE.updatePost(post.$id, {
         ...data,
-        featuredImage: file ? file.$id : undefined,
+        ...(file && file.$id && { featuredImage: file.$id }),
       });
 
-      if (dbPOSt) {
-        navigate(`/post/${dbPOSt.$id}`);
+      if (dbPost) return dbPost;
+      else {
+        throw new Error("Error in editing post");
       }
-    } else {
-      const file = data.image[0]
-        ? await SERVICE.uploadFile(data.image[0])
-        : null;
-      if (file) {
-        const fileId = file.$id;
-        data.featuredImage = fileId;
-        const dbPost = await SERVICE.createPost({
-          ...data,
-          userID: userData.$id,
-        });
-        if (dbPost) {
-          navigate(`/post/${dbPost.$id}`);
-        }
-      }
+    } catch (error) {
+      console.log("Error: ", error);
+      toast.error("Error in editing post");
+      return null;
     }
   };
 
@@ -70,7 +114,7 @@ function Postform({ post }) {
 
   React.useEffect(() => {
     const subscription = watch((value, { name }) => {
-      if (name === "title") {
+      if (name === "title" && !post) {
         setValue("slug", slugTransform(value.title, { shouldValidate: true }));
       }
     });
@@ -81,9 +125,12 @@ function Postform({ post }) {
   }, [watch, slugTransform, setValue]);
 
   return (
-    <form onSubmit={handleSubmit(submit, (error) => {
-      console.log("Form Error", error);
-    })} className="flex flex-wrap">
+    <form
+      onSubmit={handleSubmit(submit, (error) => {
+        console.log("Form Error", error);
+      })}
+      className="flex flex-wrap"
+    >
       <div className="w-2/3 px-2">
         <Input
           label="Title :"
@@ -97,9 +144,11 @@ function Postform({ post }) {
           className="mb-4"
           {...register("slug", { required: true })}
           onInput={(e) => {
-            setValue("slug", slugTransform(e.currentTarget.value), {
-              shouldValidate: true,
-            });
+            if (Object.keys(post).length == 0) {
+              setValue("slug", slugTransform(e.currentTarget.value), {
+                shouldValidate: true,
+              });
+            }
           }}
         />
         <RTE
@@ -120,7 +169,7 @@ function Postform({ post }) {
         {post && (
           <div className="w-full mb-4">
             <img
-              src={SERVICE.getFilePreview(post.featuredImage)}
+              src={SERVICE.getFileView(post.featuredImage)}
               alt={post.title}
               className="rounded-lg"
             />

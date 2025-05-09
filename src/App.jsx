@@ -6,6 +6,9 @@ import "./App.css";
 import Header from "./components/Header";
 import { Footer } from "./components";
 import { Outlet } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -14,7 +17,7 @@ function App() {
     Authentication.getCurrentUser()
       .then((data) => {
         if (data) {
-          dispatch(login({ data }));
+          dispatch(login({ userData: data }));
         } else {
           dispatch(logout());
         }
@@ -29,9 +32,10 @@ function App() {
           <Outlet />
         </main>
         <Footer />
+        <ToastContainer />
       </div>
     </div>
-  ) : null
+  ) : null;
 }
 
 export default App;

@@ -1,30 +1,49 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login as authLogin } from "../store/AuthSlice"; // bhai yha login ko authLogin kiya gya h, bole to rename kiya gya h orr aisa kr skte h dost
+import { login as authLogin } from "../store/AuthSlice";
 import { Button, Input, Logo } from "./index";
 import { useDispatch } from "react-redux";
 import Authentication from "../components/appwrite/auth";
 import { useForm } from "react-hook-form";
+import { toast } from "react-toastify";
 
 function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { register, handleSubmit } = useForm();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const login = async (data) => { // ek async function chlaya jisme parameter data pass kiya.
-    setError(""); // error ko empty string se set kiya taki error message clear ho jaye
+  const login = async (data) => {
+    setLoading(true);
+    setError(""); // Clear previous errors
     try {
-      const session = await Authentication.login(data); // login method ko call kiya orr data ko pass kiya
+      const session = await Authentication.login(data);
+
       if (session) {
-        const userData = await Authentication.getCurrentUser(); // getCurrentUser method ko call kiya orr pta kiya ki kya user data match krta hai
-        if (userData) dispatch(authLogin(userData)); // login method ko call kiya orr dispatch kiya
-        navigate("/");
+        const userData = await Authentication.getCurrentUser();
+        if (userData) {
+          dispatch(authLogin({ userData }));
+          toast.success("Login successful! Welcome back.");
+          navigate("/");
+        }
+      } else {
+        toast.error("Login failed. Please check your credentials.");
+        setError("Login failed. Please check your credentials.");
       }
     } catch (error) {
-      setError(error.message);
+      console.error("Login error:", error);
+      toast.error(error.message || "Login failed. Please try again.");
+      setError(error.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
     <div className="flex items-center justify-center w-full">
       <div
@@ -56,34 +75,44 @@ function Login() {
               placeholder="Enter your email"
               type="email"
               {...register("email", {
-                required: true,
+                required: "Email is required",
                 validate: {
-                  matchPatern: (value) =>
+                  matchPattern: (value) =>
                     /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(
                       value
-                    ) || "Enter a valid email adress",
+                    ) || "Enter a valid email address",
                 },
               })}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
+            )}
 
             <Input
               label="Password: "
               placeholder="Enter your password"
               type="password"
               {...register("password", {
-                required: true,
+                required: "Password is required",
                 validate: {
-                  matchPatern: (value) =>
+                  matchPattern: (value) =>
                     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(
                       value
                     ) ||
-                    "Password must be at least one lowercase, one uppercase, one digit, one special char, minimum 8 length.",
+                    "Password must have at least one lowercase, one uppercase, one digit, one special char, minimum 8 length.",
                 },
               })}
             />
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password.message}
+              </p>
+            )}
 
-            <Button type="submit" className="w-full">
-              Sign in
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
             </Button>
           </div>
         </form>

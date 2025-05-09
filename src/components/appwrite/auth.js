@@ -14,7 +14,7 @@ export class authService {
 
     this.account = new Account(this.client);
   }
-  async createAccount({ name, email, password  }) {
+  async createAccount({ name, email, password }) {
     // yha hm without culry braces prop v pass kr skte the but user accout me prop.email etc dena prta
     try {
       const userAccount = await this.account.create(
@@ -52,7 +52,6 @@ export class authService {
       return await this.account.get();
     } catch (error) {
       console.log("Appwrite service :: getCurrentUser :: error", error);
-      
     }
 
     return null;

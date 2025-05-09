@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import SERVICE from "../components/appwrite/majorconf";
 import { Container, Postcard } from "../components";
+import { toast } from "react-toastify";
 
 function Home() {
   const [posts, setPosts] = useState([]);
   useEffect(() => {
-    SERVICE.allPost([]).then((post) => {
+    SERVICE.allPost().then((post) => {
       if (post) {
         setPosts(post.documents);
       }
@@ -37,7 +38,7 @@ function Home() {
           <div className="flex flex-wrap">
             {posts.map((post) => (
               <div key={post.$id} className="p-2 w-1/4">
-                <Postcard {...post} />
+                <Postcard post={post} />
               </div>
             ))}
           </div>
